@@ -115,6 +115,7 @@ It is a one time code, and you will not get a drink for it after it has been use
                 'You have already received all your bongs')
             return
 
+        self._people[message.personId] = self._people.get(message.personId, 0) + 1
         await self._send_new_bong(spark, message.personId)
 
     async def count(self, loop, spark, message):
@@ -143,7 +144,6 @@ It is a one time code, and you will not get a drink for it after it has been use
         del self._valid_bongs[entry]
         self._validated.append(entry)
 
-        created_bongs = self._people.get(personId, 0)
         if not self._all_bongs_created(personId):
             await self._send_new_bong(spark, personId)
 
@@ -175,9 +175,10 @@ It is a one time code, and you will not get a drink for it after it has been use
 
     def _all_bongs_created(self, personId):
         limit = self._bongs.get('limit', None)
-        return limit and self._people.get(personId, 0) == self._bongs['limit']
+        return limit and self._people.get(personId, 0) >= self._bongs['limit']
 
     async def _send_new_bong(self, spark, personId):
+        self._people[personId] = self._people.get(personId, 0) + 1
         bong_id, img = self._create_new_bong()
         await self._send_bong(img, bong_id, personId, spark)
 
@@ -197,8 +198,8 @@ It is a one time code, and you will not get a drink for it after it has been use
                     None,
                     [fd.name])
                 self._valid_bongs[bong_id] = personId
-                self._people[personId] = self._people.get(personId, 0) + 1
             except ciscosparkapi.exceptions.SparkApiError:
+                self._people[personId] -= 1
                 await loop.run_in_executor(
                     None,
                     spark.messages.create,
