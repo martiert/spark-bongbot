@@ -1,0 +1,28 @@
+{
+  "bot": {
+    "token": "<some spark bot token>",
+    "webhook": "https://my_webhook_domain.com/spark",
+    "port": 3003
+  },
+  "bongs": {
+    "room": "<some spark room id>",
+    "welcome_message": "Welcome to Some event!",
+    "background": "/path/to/cool/background/image.png",
+    "limit": 1
+  },
+  "administrators": [".*@my_company.com$"],
+  "ignore": [
+    ".*@sparkbot.io$"
+  ],
+  "draw": {
+    "rooms": [
+      "<first room id>",
+      "<second room id>",
+      "<thirs room id>"
+    ],
+    "exclude": [
+      ".*@sparkbot.io$",
+      ".*@my_company.com$"
+    ]
+  }
+}
