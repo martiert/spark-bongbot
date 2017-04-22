@@ -84,17 +84,17 @@ class Server:
     async def _setup_webserver(self):
         self._application = web.Application()
         self._application.router.add_post(
-                '/',
-                self._webhook_notified
+            '/',
+            self._webhook_notified
         )
 
         for route, callback in self._get_routes.items():
             self._application.router.add_get(
-                    route,
-                    functools.partial(
-                        self._handle_get,
-                        callback,
-                    )
+                route,
+                functools.partial(
+                    self._handle_get,
+                    callback,
+                )
             )
         self._handler = self._application.make_handler()
         server = await self._loop.create_server(
@@ -107,10 +107,10 @@ class Server:
     async def _handle_get(self, callback, request):
         html, code = await callback(self._api, request.match_info)
         return web.Response(
-                text=html,
-                content_type='text/html',
-                status=code,
-                )
+            text=html,
+            content_type='text/html',
+            status=code,
+        )
 
     def add_get(self, route, callback):
         self._get_routes[route] = callback

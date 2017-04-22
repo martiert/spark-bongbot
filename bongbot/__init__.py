@@ -33,12 +33,12 @@ validate_html = '''<html>
 async def get_emails(spark, roomid):
     loop = asyncio.get_event_loop()
     members = await loop.run_in_executor(
-            None,
-            spark.memberships.list,
-            roomid,
-            None,
-            None,
-            1000)
+        None,
+        spark.memberships.list,
+        roomid,
+        None,
+        None,
+        1000)
     return [member.personEmail for member in members]
 
 
@@ -61,9 +61,9 @@ class Bongbot:
         if background:
             self._background = PIL.Image.open(self._bongs['background'])
             self._foreground = PIL.Image.new(
-                    self._background.mode,
-                    self._background.size,
-                    'black',
+                self._background.mode,
+                self._background.size,
+                'black',
             )
 
     async def party(self, loop, spark, message):
@@ -71,12 +71,12 @@ class Bongbot:
             return
 
         self._server.listen(
-                '^bong$',
-                self.create_bong,
+            '^bong$',
+            self.create_bong,
         )
         self._server.listen(
-                '^count$',
-                self.count,
+            '^count$',
+            self.count,
         )
 
         members = await get_emails(spark, self._bongs['room'])
@@ -96,23 +96,23 @@ It is a one time code, and you will not get a drink for it after it has been use
 
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
-                None,
-                spark.messages.create,
-                None,
-                message.personId,
-                None,
-                'Done sending notifications')
+            None,
+            spark.messages.create,
+            None,
+            message.personId,
+            None,
+            'Done sending notifications')
 
     async def create_bong(self, loop, spark, message):
         if self._all_bongs_created(message.personId):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(
-                    None,
-                    spark.messages.create,
-                    None,
-                    message.personId,
-                    None,
-                    'You have already received all your bongs')
+                None,
+                spark.messages.create,
+                None,
+                message.personId,
+                None,
+                'You have already received all your bongs')
             return
 
         await self._send_new_bong(spark, message.personId)
@@ -123,14 +123,14 @@ It is a one time code, and you will not get a drink for it after it has been use
 
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
-                None,
-                spark.messages.create,
-                None,
-                message.personId,
-                None,
-                'There have been a total of {} bongs validated'.format(
-                    len(self._validated)
-                )
+            None,
+            spark.messages.create,
+            None,
+            message.personId,
+            None,
+            'There have been a total of {} bongs validated'.format(
+                len(self._validated)
+            )
         )
 
     async def validate(self, spark, info):
@@ -148,9 +148,9 @@ It is a one time code, and you will not get a drink for it after it has been use
             await self._send_new_bong(spark, personId)
 
         text = validate_html.format(
-                text='QR code is valid for one drink!',
-                color='green'
-                )
+            text='QR code is valid for one drink!',
+            color='green'
+        )
         return text, 200
 
     async def draw(self, loop, spark, message):
@@ -162,12 +162,12 @@ It is a one time code, and you will not get a drink for it after it has been use
         if not completers:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(
-                    None,
-                    spark.messages.create,
-                    None,
-                    message.personId,
-                    None,
-                    'No non-excluded people have completed the challenge.')
+                None,
+                spark.messages.create,
+                None,
+                message.personId,
+                None,
+                'No non-excluded people have completed the challenge.')
             return
 
         winner = random.choice(completers)
@@ -188,24 +188,24 @@ It is a one time code, and you will not get a drink for it after it has been use
 
             try:
                 await loop.run_in_executor(
-                        None,
-                        spark.messages.create,
-                        None,
-                        personId,
-                        None,
-                        'Here is your new bong, show this to the bartender when you want a new drink',
-                        None,
-                        [fd.name])
+                    None,
+                    spark.messages.create,
+                    None,
+                    personId,
+                    None,
+                    'Here is your new bong, show this to the bartender when you want a new drink',
+                    None,
+                    [fd.name])
                 self._valid_bongs[bong_id] = personId
                 self._people[personId] = self._people.get(personId, 0) + 1
             except ciscosparkapi.exceptions.SparkApiError:
                 await loop.run_in_executor(
-                        None,
-                        spark.messages.create,
-                        None,
-                        personId,
-                        None,
-                        'I\'m sorry, something went wrong when trying to send the bong to spark. Please try again')
+                    None,
+                    spark.messages.create,
+                    None,
+                    personId,
+                    None,
+                    'I\'m sorry, something went wrong when trying to send the bong to spark. Please try again')
 
     def _create_new_bong(self):
         bong_id = str(uuid.uuid4())
@@ -237,28 +237,28 @@ It is a one time code, and you will not get a drink for it after it has been use
     async def _notify_winner(self, winner, spark, personId):
         loop = asyncio.get_event_loop()
         people = await loop.run_in_executor(
-                None,
-                spark.people.list,
-                winner)
+            None,
+            spark.people.list,
+            winner)
 
         for p in people:
             winner_message = '''Congratulations {}! You won'''.format(p.displayName)
             response = 'The winner is {} ({})'.format(p.displayName, p.emails[0])
 
             await loop.run_in_executor(
-                    None,
-                    spark.messages.create,
-                    None,
-                    personId,
-                    None,
-                    response)
+                None,
+                spark.messages.create,
+                None,
+                personId,
+                None,
+                response)
             await loop.run_in_executor(
-                    None,
-                    spark.messages.create,
-                    None,
-                    None,
-                    p.emails[0],
-                    winner_message)
+                None,
+                spark.messages.create,
+                None,
+                None,
+                p.emails[0],
+                winner_message)
             return
 
     async def _notify_all(self, members, message, spark):
@@ -268,13 +268,13 @@ It is a one time code, and you will not get a drink for it after it has been use
                 continue
 
             await loop.run_in_executor(
-                    None,
-                    spark.messages.create,
-                    None,
-                    None,
-                    email,
-                    None,
-                    message)
+                None,
+                spark.messages.create,
+                None,
+                None,
+                email,
+                None,
+                message)
 
     def _allowed(self, email):
         for admin in self._admins:
@@ -297,13 +297,13 @@ It is a one time code, and you will not get a drink for it after it has been use
     def _setup_server(self, config):
         loop = asyncio.get_event_loop()
         self._server = Server(
-                config['bot'],
-                loop
+            config['bot'],
+            loop
         )
 
         self._server.listen(
-                '^party!$',
-                self.party,
+            '^party!$',
+            self.party,
         )
         self._server.add_get('/validate/{entry}', self.validate)
 
