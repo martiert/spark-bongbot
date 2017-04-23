@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import uuid
+import sre_constants
 
 import PIL.Image
 import ciscosparkapi
@@ -316,20 +317,29 @@ It is a one time code, and you will not get a drink for it after it has been use
 
     def _allowed(self, email):
         for admin in self._admins:
-            if re.match(admin, email):
-                return True
+            try:
+                if re.match(admin, email):
+                    return True
+            except sre_constants.error:
+                pass
         return False
 
     def _should_ignore(self, email):
         for ignore in self._ignore:
-            if re.match(ignore, email):
-                return True
+            try:
+                if re.match(ignore, email):
+                    return True
+            except sre_constants.error:
+                pass
         return False
 
     def _should_exclude(self, email):
         for exclude in self._draw.get('exclude', []):
-            if re.match(exclude, email):
-                return True
+            try:
+                if re.match(exclude, email):
+                    return True
+            except sre_constants.error:
+                pass
         return False
 
     def _setup_server(self, config):
