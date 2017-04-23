@@ -20,6 +20,7 @@ class Server:
         self._callbacks = []
         self._hooks = {}
         self._get_routes = {}
+        self._post_routes = {}
         self._default_message = dummy
         self._pre_message = dummy
         self._on_startup = dummy
@@ -42,7 +43,7 @@ class Server:
         self._on_room_created = callback
 
     async def setup(self):
-        await self._remove_webhooks()
+        await self.cleanup()
         await asyncio.wait([self._get_self(), self._register_webhooks()])
         await self._on_startup(self._api)
         return await self._setup_webserver()
@@ -95,6 +96,7 @@ class Server:
         await self._on_room_created(
             self._api,
             webhook_data['data']['roomId'],
+            webhook_data['data']['id'],
             person,
         )
 
@@ -120,6 +122,15 @@ class Server:
                     callback,
                 )
             )
+        for route, callback in self._post_routes.items():
+            self._application.router.add_post(
+                route,
+                functools.partial(
+                    self._handle_post,
+                    callback,
+                )
+            )
+
         self._handler = self._application.make_handler()
         server = await self._loop.create_server(
             self._handler,
@@ -136,8 +147,15 @@ class Server:
             status=code,
         )
 
+    async def _handle_post(self, callback, request):
+        code = await callback(self._api, request)
+        return web.Response(status=code)
+
     def add_get(self, route, callback):
         self._get_routes[route] = callback
+
+    def add_post(self, route, callback):
+        self._post_routes[route] = callback
 
     async def _get_self(self):
         me = await self._loop.run_in_executor(
