@@ -23,6 +23,7 @@ class Server:
         self._default_message = dummy
         self._pre_message = dummy
         self._on_startup = dummy
+        self._on_room_created = dummy
         self._messages = []
 
     def listen(self, match, callback):
@@ -36,6 +37,9 @@ class Server:
 
     def on_startup(self, callback):
         self._on_startup = callback
+
+    def roomcreation(self, callback):
+        self._on_room_created = callback
 
     async def setup(self):
         await self._remove_webhooks()
@@ -64,7 +68,7 @@ class Server:
                     for callback in callbacks]
             )
         else:
-            await self._default_message(self._loop, self._api, message)
+            await self._default_message(self._api, message)
 
     async def _message_created(self, webhook_data):
         if webhook_data['data']['personId'] == self._id:
@@ -77,6 +81,22 @@ class Server:
         )
 
         await self._handle_message(message)
+
+    async def _room_created(self, webhook_data):
+        if not webhook_data['data']['personId'] == self._id:
+            return
+
+        person = await self._loop.run_in_executor(
+            None,
+            self._api.people.get,
+            webhook_data['actorId']
+        )
+
+        await self._on_room_created(
+            self._api,
+            webhook_data['data']['roomId'],
+            person,
+        )
 
     async def _webhook_notified(self, request):
         data = await request.json()
@@ -128,12 +148,19 @@ class Server:
         self._displayname = me.displayName.replace(' (bot)', '')
 
     async def _register_webhooks(self):
-        if self._callbacks:
+        if self._callbacks or self._default_message:
             await self._create_webhook(
                 'message created',
                 'messages',
                 'created',
                 self._message_created,
+            )
+        if self._on_room_created:
+            await self._create_webhook(
+                'room created',
+                'memberships',
+                'created',
+                self._room_created,
             )
 
     async def _create_webhook(self, name, resource, event, callback):
