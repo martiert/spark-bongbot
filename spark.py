@@ -129,7 +129,7 @@ class Server:
         return server
 
     async def _handle_get(self, callback, request):
-        html, code = await callback(self._api, request.match_info)
+        html, code = await callback(self._api, request)
         return web.Response(
             text=html,
             content_type='text/html',

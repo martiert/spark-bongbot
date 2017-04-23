@@ -171,8 +171,8 @@ It is a one time code, and you will not get a drink for it after it has been use
             )
         )
 
-    async def validate(self, spark, info):
-        entry = info.get('entry', None)
+    async def validate(self, spark, request):
+        entry = request.match_info.get('entry', None)
         if not entry or not self._valid_bongs.get(entry, None):
             text = validate_html.format(text='Invalid QR code', color='red')
             return text, 404
