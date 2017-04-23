@@ -22,6 +22,7 @@ class Server:
         self._get_routes = {}
         self._default_message = dummy
         self._pre_message = dummy
+        self._on_startup = dummy
         self._messages = []
 
     def listen(self, match, callback):
@@ -33,9 +34,13 @@ class Server:
     def pre_message(self, callback):
         self._pre_message = callback
 
+    def on_startup(self, callback):
+        self._on_startup = callback
+
     async def setup(self):
         await self._remove_webhooks()
         await asyncio.wait([self._get_self(), self._register_webhooks()])
+        await self._on_startup(self._api)
         return await self._setup_webserver()
 
     async def cleanup(self):
@@ -54,7 +59,6 @@ class Server:
         if callbacks:
             await asyncio.wait(
                 [callback[1](
-                    self._loop,
                     self._api,
                     message)
                     for callback in callbacks]

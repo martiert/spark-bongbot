@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import asyncio
 import qrcode
 import random
@@ -30,6 +28,10 @@ validate_html = '''<html>
 </html>'''
 
 
+class StopBongBot(BaseException):
+    pass
+
+
 async def get_emails(spark, roomid):
     loop = asyncio.get_event_loop()
     members = await loop.run_in_executor(
@@ -43,12 +45,13 @@ async def get_emails(spark, roomid):
 
 
 class Bongbot:
-    def __init__(self, config):
+    def __init__(self, config, owner):
         self._admins = config.get('administrators', [])
         self._ignore = config.get('ignore', [])
         self._bongs = config['bongs']
         self._draw = config.get('draw', None)
         self._validate_url = '{}/validate'.format(config['bot']['webhook'])
+        self._owner = owner
 
         self._setup_server(config)
 
@@ -66,7 +69,41 @@ class Bongbot:
                 'black',
             )
 
-    async def party(self, loop, spark, message):
+    async def kill(self, spark, message):
+        if not self._allowed(message.personEmail):
+            return
+
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            spark.messages.create,
+            None,
+            None,
+            message.personEmail,
+            'Instance deleted. Thank you!')
+
+        raise StopBongBot()
+
+    async def started(self, spark):
+        loop = asyncio.get_event_loop()
+
+        message = '''
+Hi. You're the owner of this instance.
+<br/><br/>
+- To start the party, write **party!**
+- When it's over, please write **kill!** to free the instance
+'''
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            spark.messages.create,
+            None,
+            None,
+            self._owner,
+            None,
+            message)
+
+    async def party(self, spark, message):
         if not self._allowed(message.personEmail):
             return
 
@@ -103,7 +140,7 @@ It is a one time code, and you will not get a drink for it after it has been use
             None,
             'Done sending notifications')
 
-    async def create_bong(self, loop, spark, message):
+    async def create_bong(self, spark, message):
         if self._all_bongs_created(message.personId):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(
@@ -118,7 +155,7 @@ It is a one time code, and you will not get a drink for it after it has been use
         self._people[message.personId] = self._people.get(message.personId, 0) + 1
         await self._send_new_bong(spark, message.personId)
 
-    async def count(self, loop, spark, message):
+    async def count(self, spark, message):
         if not self._allowed(message.personEmail):
             return
 
@@ -153,7 +190,7 @@ It is a one time code, and you will not get a drink for it after it has been use
         )
         return text, 200
 
-    async def draw(self, loop, spark, message):
+    async def draw(self, spark, message):
         if not self._allowed(message.personEmail):
             return
 
@@ -306,7 +343,14 @@ It is a one time code, and you will not get a drink for it after it has been use
             '^party!$',
             self.party,
         )
+        self._server.listen(
+            '^kill!$',
+            self.kill,
+        )
         self._server.add_get('/validate/{entry}', self.validate)
+
+        if self._owner:
+            self._server.on_startup(self.started)
 
         if self._draw:
             self._server.listen('^draw$', self.draw)
@@ -319,6 +363,8 @@ It is a one time code, and you will not get a drink for it after it has been use
         try:
             loop.run_forever()
         except KeyboardInterrupt:
+            pass
+        except StopBongBot:
             pass
         except:
             print(sys.exc_info())
