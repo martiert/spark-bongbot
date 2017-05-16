@@ -153,7 +153,6 @@ It is a one time code, and you will not get a drink for it after it has been use
                 'You have already received all your bongs')
             return
 
-        self._people[message.personId] = self._people.get(message.personId, 0) + 1
         await self._send_new_bong(spark, message.personId)
 
     async def count(self, spark, message):
@@ -218,7 +217,8 @@ It is a one time code, and you will not get a drink for it after it has been use
     async def _send_new_bong(self, spark, personId):
         self._people[personId] = self._people.get(personId, 0) + 1
         bong_id, img = self._create_new_bong()
-        await self._send_bong(img, bong_id, personId, spark)
+        if not await self._send_bong(img, bong_id, personId, spark):
+            self._people[personId] = self._people[personId] - 1
 
     async def _send_bong(self, image, bong_id, personId, spark):
         loop = asyncio.get_event_loop()
@@ -236,6 +236,7 @@ It is a one time code, and you will not get a drink for it after it has been use
                     None,
                     [fd.name])
                 self._valid_bongs[bong_id] = personId
+                return True
             except ciscosparkapi.exceptions.SparkApiError:
                 self._people[personId] -= 1
                 await loop.run_in_executor(
@@ -245,6 +246,7 @@ It is a one time code, and you will not get a drink for it after it has been use
                     personId,
                     None,
                     'I\'m sorry, something went wrong when trying to send the bong to spark. Please try again')
+                return False
 
     def _create_new_bong(self):
         bong_id = str(uuid.uuid4())
