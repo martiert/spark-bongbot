@@ -1,7 +1,9 @@
 import json
 import signal
 import subprocess
+import time
 import sys
+import threading
 import tempfile
 import asyncio
 import aiohttp
@@ -198,6 +200,14 @@ class Admin:
             None,
             question)
 
+    def wait_for_timeout(self, child, token, api, subbot_id, parent_id):
+        time.sleep(self._max_duration * 3600)
+        child.send_signal(signal.SIGINT)
+        self._children[token]['in_use'] = False
+
+        api.memberships.delete(subbot_id)
+        api.memberships.delete(parent_id)
+
     async def answer(self, api, message):
         loop = asyncio.get_event_loop()
 
@@ -226,18 +236,13 @@ class Admin:
             membership_id = config['membership']
 
             del self._states[message.personId]
-            await asyncio.sleep(self._max_duration * 3600.0)
-            child.send_signal(signal.SIGINT)
-            self._children[token]['in_use'] = False
-
-            membership = await loop.run_in_executor(
+            t = threading.Thread(
                 None,
-                api.memberships.delete,
-                membership.id)
-            membership = await loop.run_in_executor(
-                None,
-                api.memberships.delete,
-                membership_id)
+                self.wait_for_timeout,
+                "wait thread",
+                (child, token, api, membership.id, membership_id))
+            t.run()
+            t.daemon = True
             return
 
         if error:
